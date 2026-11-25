@@ -16,16 +16,20 @@ def main() -> None:
     assert text.strip(), "line must not be only whitespace"
     assert "\n" not in text, "entry must be a single line"
 
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output") or "/output"
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, "entry.txt")
-    with open(path, "w", encoding="utf-8", newline="") as f:
+    # Atomic write: a crash mid-write can never leave a torn entry.txt.
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8", newline="") as f:
         f.write(text)
+    os.replace(tmp_path, path)
 
     with open(path, "rb") as f:
         written = f.read()
     assert written == text.encode("utf-8"), "read-back mismatch"
     assert written == LINE.encode("utf-8")
+    assert len(written) == 71, f"entry must be 71 bytes, got {len(written)}"
 
 
 if __name__ == "__main__":
